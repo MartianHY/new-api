@@ -70,6 +70,12 @@ func authHelper(c *gin.Context, minRole int) {
 						"success": false,
 						"message": common.TranslateMessage(c, i18n.MsgDatabaseError),
 					})
+				} else if errors.Is(authErr, service.ErrCMDBAuthSecretMismatch) {
+					common.SysLog("CMDB auth JWT signature verification failed. Please check whether new-api CMDB_JWT_SECRET is the same as cmdb SECRET_KEY. Detail: " + authErr.Error())
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"success": false,
+						"message": common.TranslateMessage(c, i18n.MsgAuthNotLoggedIn),
+					})
 				} else {
 					common.SysLog("AuthenticateCMDBAccessToken failed: " + authErr.Error())
 					c.JSON(http.StatusUnauthorized, gin.H{

@@ -68,11 +68,11 @@ spec:
             - name: postgresql
               containerPort: 5432
           env:
-            - name: POSTGRES_USER
+            - name: POSTGRESQL_USERNAME
               value: {{ .Values.database.postgresql.user | quote }}
-            - name: POSTGRES_DB
+            - name: POSTGRESQL_DATABASE
               value: {{ .Values.database.postgresql.database | quote }}
-            - name: POSTGRES_PASSWORD
+            - name: POSTGRESQL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "new-api.secretName" . }}
@@ -82,7 +82,7 @@ spec:
           {{- if .Values.database.postgresql.persistence.enabled }}
           volumeMounts:
             - name: data
-              mountPath: /var/lib/postgresql/data
+              mountPath: /bitnami/postgresql
           {{- end }}
       {{- if .Values.database.postgresql.persistence.enabled }}
       volumes:

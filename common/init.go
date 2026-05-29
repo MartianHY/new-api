@@ -56,6 +56,9 @@ func InitEnv() {
 			SessionSecret = ss
 		}
 	}
+	if os.Getenv("SESSION_COOKIE_NAME") != "" {
+		SessionCookieName = os.Getenv("SESSION_COOKIE_NAME")
+	}
 	if os.Getenv("CRYPTO_SECRET") != "" {
 		CryptoSecret = os.Getenv("CRYPTO_SECRET")
 	} else {

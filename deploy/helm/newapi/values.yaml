@@ -1,8 +1,8 @@
 replicaCount: 1
 
 image:
-  registry: docker.io
-  repository: calciumion/new-api
+  registry: ""
+  repository: new-api
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -61,7 +61,8 @@ env:
   ERROR_LOG_ENABLED: "true"
   BATCH_UPDATE_ENABLED: "true"
   NODE_NAME: new-api
-  CMDB_AUTH_ENABLED: "false"
+  SESSION_COOKIE_NAME: newapi_session
+  CMDB_AUTH_ENABLED: "true"
   CMDB_AUTH_HEADER: Access-Token
   CMDB_AUTH_COOKIE: token
   CMDB_AUTH_ALLOW_AUTHORIZATION: "true"
@@ -75,7 +76,7 @@ secret:
   existingSecret: ""
   sessionSecret: ""
   cryptoSecret: ""
-  cmdbJwtSecret: ""
+  cmdbJwtSecret: "change-me"
   sqlDsn: ""
   redisConnString: ""
 
@@ -92,9 +93,9 @@ database:
     password: "123456"
     sslMode: disable
     image:
-      registry: docker.io
-      repository: library/postgres
-      tag: "15"
+      registry: registry-1.docker.io
+      repository: bitnami/postgresql
+      tag: latest-tz
       pullPolicy: IfNotPresent
     persistence:
       enabled: true

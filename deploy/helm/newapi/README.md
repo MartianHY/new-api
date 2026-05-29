@@ -1,20 +1,23 @@
 # new-api Helm Chart
 
-This chart deploys new-api with optional built-in PostgreSQL and Redis.
+This chart deploys new-api with built-in PostgreSQL and Redis by default.
+It is preconfigured for the CMDB-auth integration build.
 
 ## Quick start
 
 ```bash
-helm install new-api ./helm-charts/new-api \
-  --set secret.sessionSecret="$(openssl rand -hex 32)"
+helm install new-api ./deploy/helm/new-api-0.1.0.tgz
 ```
 
 The default values deploy:
 
-- new-api application
+- new-api application from the local/custom `new-api:latest` image
 - PostgreSQL 15
 - Redis 7
 - PVCs for `/data` and `/app/logs`
+- CMDB JWT authentication enabled
+- CMDB access token read from the `Access-Token` header or `token` cookie
+- A separate `newapi_session` cookie to avoid conflicts with CMDB's `session` cookie
 
 ## External PostgreSQL and Redis
 
@@ -70,12 +73,13 @@ To let new-api trust CMDB `Access-Token` JWTs while keeping quota, groups, API t
 env:
   CMDB_AUTH_ENABLED: "true"
   CMDB_AUTH_HEADER: Access-Token
+  CMDB_AUTH_COOKIE: token
   CMDB_AUTH_ALLOW_AUTHORIZATION: "true"
   CMDB_AUTH_MATCH_USERNAME: "false"
-  CMDB_AUTH_USERINFO_URL: "http://cmdb-api.default.svc.cluster.local:5000/v1/acl/users/info"
+  SESSION_COOKIE_NAME: newapi_session
 
 secret:
-  cmdbJwtSecret: "same-value-as-cmdb-SECRET_KEY"
+  cmdbJwtSecret: "change-me"
 ```
 
-With this first-stage integration, the CMDB user must already exist in new-api with the same email. User auto-sync can be added later.
+These are the chart defaults. With this first-stage integration, the CMDB user must already exist in new-api with the same email. User auto-sync can be added later.

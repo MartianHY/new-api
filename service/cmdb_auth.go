@@ -20,6 +20,7 @@ var (
 	ErrCMDBAuthDisabled       = errors.New("cmdb auth disabled")
 	ErrCMDBAuthConfig         = errors.New("cmdb auth config invalid")
 	ErrCMDBAuthTokenInvalid   = errors.New("cmdb auth token invalid")
+	ErrCMDBAuthSecretMismatch = errors.New("cmdb auth secret mismatch")
 	ErrCMDBAuthUserNotMapped  = errors.New("cmdb auth user not mapped")
 	ErrCMDBAuthUserInfoFailed = errors.New("cmdb auth userinfo failed")
 )
@@ -108,6 +109,9 @@ func AuthenticateCMDBAccessToken(ctx context.Context, token string) (*model.User
 		return []byte(secret), nil
 	}, jwt.WithLeeway(30*time.Second))
 	if err != nil || parsed == nil || !parsed.Valid {
+		if errors.Is(err, jwt.ErrTokenSignatureInvalid) {
+			return nil, fmt.Errorf("%w: JWT signature verification failed, check CMDB_JWT_SECRET matches cmdb SECRET_KEY: %v", ErrCMDBAuthSecretMismatch, err)
+		}
 		return nil, fmt.Errorf("%w: %v", ErrCMDBAuthTokenInvalid, err)
 	}
 

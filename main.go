@@ -184,7 +184,7 @@ func main() {
 		Secure:   false,
 		SameSite: http.SameSiteStrictMode,
 	})
-	server.Use(sessions.Sessions("session", store))
+	server.Use(sessions.Sessions(common.SessionCookieName, store))
 
 	InjectUmamiAnalytics()
 	InjectGoogleAnalytics()

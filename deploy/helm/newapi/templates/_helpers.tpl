@@ -67,6 +67,15 @@ Service account name.
 {{- end }}
 {{- end }}
 
+{{- define "new-api.image" -}}
+{{- $tag := .Values.image.tag | default .Chart.AppVersion -}}
+{{- if .Values.image.registry -}}
+{{- printf "%s/%s:%s" .Values.image.registry .Values.image.repository $tag -}}
+{{- else -}}
+{{- printf "%s:%s" .Values.image.repository $tag -}}
+{{- end -}}
+{{- end }}
+
 {{- define "new-api.postgresqlName" -}}
 {{- printf "%s-postgresql" (include "new-api.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
