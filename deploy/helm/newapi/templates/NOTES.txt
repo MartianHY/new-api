@@ -1,0 +1,17 @@
+new-api has been deployed.
+
+Service:
+  {{ include "new-api.fullname" . }}:{{ .Values.service.port }}
+
+{{- if .Values.ingress.enabled }}
+Ingress:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}{{ (index .paths 0).path }}
+{{- end }}
+{{- else }}
+Port-forward:
+  kubectl port-forward svc/{{ include "new-api.fullname" . }} 3000:{{ .Values.service.port }}
+{{- end }}
+
+Production reminder:
+  Set secret.sessionSecret, database passwords, and redis.password through a private values file or an existing Secret before production use.

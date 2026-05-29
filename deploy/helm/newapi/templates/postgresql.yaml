@@ -1,0 +1,93 @@
+{{- if and (eq .Values.database.type "postgresql") .Values.database.postgresql.builtIn }}
+{{- if and .Values.database.postgresql.persistence.enabled (not .Values.database.postgresql.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "new-api.postgresqlPVCName" . }}
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+  {{- with .Values.database.postgresql.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.database.postgresql.persistence.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.database.postgresql.persistence.size }}
+  {{- if .Values.database.postgresql.persistence.storageClassName }}
+  storageClassName: {{ .Values.database.postgresql.persistence.storageClassName | quote }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "new-api.postgresqlName" . }}
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+spec:
+  type: ClusterIP
+  ports:
+    - name: postgresql
+      port: {{ .Values.database.postgresql.port }}
+      targetPort: postgresql
+  selector:
+    {{- include "new-api.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "new-api.postgresqlName" . }}
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "new-api.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgresql
+  template:
+    metadata:
+      labels:
+        {{- include "new-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: "{{ .Values.database.postgresql.image.registry }}/{{ .Values.database.postgresql.image.repository }}:{{ .Values.database.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.database.postgresql.image.pullPolicy }}
+          ports:
+            - name: postgresql
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.database.postgresql.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.database.postgresql.database | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "new-api.secretName" . }}
+                  key: POSTGRES_PASSWORD
+          resources:
+            {{- toYaml .Values.database.postgresql.resources | nindent 12 }}
+          {{- if .Values.database.postgresql.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          {{- end }}
+      {{- if .Values.database.postgresql.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "new-api.postgresqlPVCName" . }}
+      {{- end }}
+{{- end }}

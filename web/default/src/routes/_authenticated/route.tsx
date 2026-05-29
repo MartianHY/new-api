@@ -28,12 +28,18 @@ export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async ({ location }) => {
     const { auth } = useAuthStore.getState()
 
-    // 如果本地没有用户信息，直接跳转登录页
+    // 如果本地没有用户信息，先尝试通过 session 或 cmdb Access-Token 恢复登录态
     if (!auth.user) {
-      throw redirect({
-        to: '/sign-in',
-        search: { redirect: location.href },
-      })
+      const res = await getSelf().catch(() => null)
+      if (res?.success && res.data) {
+        auth.setUser(res.data)
+        sessionVerified = true
+      } else {
+        throw redirect({
+          to: '/sign-in',
+          search: { redirect: location.href },
+        })
+      }
     }
 
     // 本地有用户信息，但需要验证 session 是否有效（每个会话只验证一次）

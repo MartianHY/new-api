@@ -40,6 +40,48 @@ func authHelper(c *gin.Context, minRole int) {
 	id := session.Get("id")
 	status := session.Get("status")
 	useAccessToken := false
+	useCMDBAccessToken := false
+	if username == nil {
+		if cmdbToken := service.ExtractCMDBAccessToken(c.Request); cmdbToken != "" {
+			user, authErr := service.AuthenticateCMDBAccessToken(c.Request.Context(), cmdbToken)
+			if authErr == nil && user != nil && user.Username != "" {
+				username = user.Username
+				role = user.Role
+				id = user.Id
+				status = user.Status
+				session.Set("id", user.Id)
+				session.Set("username", user.Username)
+				session.Set("role", user.Role)
+				session.Set("status", user.Status)
+				session.Set("group", user.Group)
+				if err := session.Save(); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"success": false,
+						"message": common.TranslateMessage(c, i18n.MsgUserSessionSaveFailed),
+					})
+					c.Abort()
+					return
+				}
+				useCMDBAccessToken = true
+			} else if authErr != nil && !errors.Is(authErr, service.ErrCMDBAuthDisabled) {
+				if errors.Is(authErr, model.ErrDatabase) {
+					common.SysLog("AuthenticateCMDBAccessToken database error: " + authErr.Error())
+					c.JSON(http.StatusInternalServerError, gin.H{
+						"success": false,
+						"message": common.TranslateMessage(c, i18n.MsgDatabaseError),
+					})
+				} else {
+					common.SysLog("AuthenticateCMDBAccessToken failed: " + authErr.Error())
+					c.JSON(http.StatusUnauthorized, gin.H{
+						"success": false,
+						"message": common.TranslateMessage(c, i18n.MsgAuthNotLoggedIn),
+					})
+				}
+				c.Abort()
+				return
+			}
+		}
+	}
 	if username == nil {
 		// Check access token
 		accessToken := c.Request.Header.Get("Authorization")
@@ -94,7 +136,7 @@ func authHelper(c *gin.Context, minRole int) {
 	}
 	// get header New-Api-User
 	apiUserIdStr := c.Request.Header.Get("New-Api-User")
-	if apiUserIdStr == "" {
+	if apiUserIdStr == "" && !useCMDBAccessToken {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"message": common.TranslateMessage(c, i18n.MsgAuthUserIdNotProvided),
@@ -102,23 +144,25 @@ func authHelper(c *gin.Context, minRole int) {
 		c.Abort()
 		return
 	}
-	apiUserId, err := strconv.Atoi(apiUserIdStr)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"message": common.TranslateMessage(c, i18n.MsgAuthUserIdFormatError),
-		})
-		c.Abort()
-		return
+	if apiUserIdStr != "" {
+		apiUserId, err := strconv.Atoi(apiUserIdStr)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": common.TranslateMessage(c, i18n.MsgAuthUserIdFormatError),
+			})
+			c.Abort()
+			return
 
-	}
-	if id != apiUserId {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"message": common.TranslateMessage(c, i18n.MsgAuthUserIdMismatch),
-		})
-		c.Abort()
-		return
+		}
+		if id != apiUserId {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": common.TranslateMessage(c, i18n.MsgAuthUserIdMismatch),
+			})
+			c.Abort()
+			return
+		}
 	}
 	if status.(int) == common.UserStatusDisabled {
 		c.JSON(http.StatusOK, gin.H{
@@ -152,6 +196,7 @@ func authHelper(c *gin.Context, minRole int) {
 	c.Set("group", session.Get("group"))
 	c.Set("user_group", session.Get("group"))
 	c.Set("use_access_token", useAccessToken)
+	c.Set("use_cmdb_access_token", useCMDBAccessToken)
 
 	c.Next()
 }

@@ -1,0 +1,91 @@
+{{- if and (eq .Values.database.type "mysql") .Values.database.mysql.builtIn }}
+{{- if and .Values.database.mysql.persistence.enabled (not .Values.database.mysql.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "new-api.mysqlPVCName" . }}
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+  {{- with .Values.database.mysql.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.database.mysql.persistence.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.database.mysql.persistence.size }}
+  {{- if .Values.database.mysql.persistence.storageClassName }}
+  storageClassName: {{ .Values.database.mysql.persistence.storageClassName | quote }}
+  {{- end }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "new-api.mysqlName" . }}
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  type: ClusterIP
+  ports:
+    - name: mysql
+      port: {{ .Values.database.mysql.port }}
+      targetPort: mysql
+  selector:
+    {{- include "new-api.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "new-api.mysqlName" . }}
+  labels:
+    {{- include "new-api.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "new-api.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mysql
+  template:
+    metadata:
+      labels:
+        {{- include "new-api.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: "{{ .Values.database.mysql.image.registry }}/{{ .Values.database.mysql.image.repository }}:{{ .Values.database.mysql.image.tag }}"
+          imagePullPolicy: {{ .Values.database.mysql.image.pullPolicy }}
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            - name: MYSQL_DATABASE
+              value: {{ .Values.database.mysql.database | quote }}
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "new-api.secretName" . }}
+                  key: MYSQL_ROOT_PASSWORD
+          resources:
+            {{- toYaml .Values.database.mysql.resources | nindent 12 }}
+          {{- if .Values.database.mysql.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+          {{- end }}
+      {{- if .Values.database.mysql.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "new-api.mysqlPVCName" . }}
+      {{- end }}
+{{- end }}

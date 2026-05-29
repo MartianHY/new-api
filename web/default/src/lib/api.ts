@@ -132,6 +132,63 @@ function getUserId(): string | null {
   return null
 }
 
+function getCMDBAccessToken(): string | null {
+  try {
+    if (typeof window !== 'undefined') {
+      const urlToken = consumeCMDBAccessTokenFromUrl()
+      if (urlToken) return urlToken
+      return (
+        window.localStorage.getItem('Access-Token') ||
+        window.sessionStorage.getItem('Access-Token')
+      )
+    }
+  } catch {
+    /* empty */
+  }
+  return null
+}
+
+function consumeCMDBAccessTokenFromUrl(): string | null {
+  const tokenParamNames = ['cmdb_access_token', 'access_token', 'Access-Token']
+  const url = new URL(window.location.href)
+  let token: string | null = null
+  let changed = false
+
+  for (const name of tokenParamNames) {
+    const value = url.searchParams.get(name)
+    if (value) {
+      token = value
+      url.searchParams.delete(name)
+      changed = true
+    }
+  }
+
+  const hashQuestionIndex = url.hash.indexOf('?')
+  if (hashQuestionIndex >= 0) {
+    const hashPath = url.hash.slice(0, hashQuestionIndex)
+    const hashParams = new URLSearchParams(url.hash.slice(hashQuestionIndex + 1))
+    for (const name of tokenParamNames) {
+      const value = hashParams.get(name)
+      if (value) {
+        token = value
+        hashParams.delete(name)
+        changed = true
+      }
+    }
+    const rest = hashParams.toString()
+    url.hash = rest ? `${hashPath}?${rest}` : hashPath
+  }
+
+  if (token) {
+    window.localStorage.setItem('Access-Token', token)
+  }
+  if (changed) {
+    window.history.replaceState(null, document.title, url.toString())
+  }
+
+  return token
+}
+
 /**
  * Get common request headers (for both axios and SSE requests)
  */
@@ -143,6 +200,10 @@ export function getCommonHeaders(): Record<string, string> {
   const uid = getUserId()
   if (uid) {
     headers['New-Api-User'] = uid
+  }
+  const cmdbAccessToken = getCMDBAccessToken()
+  if (cmdbAccessToken) {
+    headers['Access-Token'] = cmdbAccessToken
   }
 
   return headers
@@ -158,6 +219,10 @@ api.interceptors.request.use((config) => {
   if (uid) {
     // Custom header for user identification
     ;(config.headers as Record<string, string>)['New-Api-User'] = uid
+  }
+  const cmdbAccessToken = getCMDBAccessToken()
+  if (cmdbAccessToken) {
+    ;(config.headers as Record<string, string>)['Access-Token'] = cmdbAccessToken
   }
   return config
 })
