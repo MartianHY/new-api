@@ -13,6 +13,8 @@ API_DOCKERFILE ?= Dockerfile
 API_PLATFORM ?=
 API_GOPROXY ?= https://goproxy.cn,direct
 API_GOSUMDB ?= sum.golang.google.cn
+API_DEBIAN_MIRROR ?= http://mirrors.aliyun.com/debian
+API_DEBIAN_SECURITY_MIRROR ?= http://mirrors.aliyun.com/debian-security
 
 .PHONY: all api build-frontend build-frontend-classic build-all-frontends start-backend dev dev-api dev-api-rebuild dev-web dev-web-classic reset-setup
 
@@ -21,9 +23,9 @@ all: build-all-frontends start-backend
 api:
 	@echo "Building API image $(API_IMAGE):$(API_TAG) with $(API_DOCKERFILE)..."
 	@if [ -n "$(API_PLATFORM)" ]; then \
-		docker build --platform "$(API_PLATFORM)" --build-arg GOPROXY="$(API_GOPROXY)" --build-arg GOSUMDB="$(API_GOSUMDB)" -f "$(API_DOCKERFILE)" -t "$(API_IMAGE):$(API_TAG)" .; \
+		docker build --platform "$(API_PLATFORM)" --build-arg GOPROXY="$(API_GOPROXY)" --build-arg GOSUMDB="$(API_GOSUMDB)" --build-arg DEBIAN_MIRROR="$(API_DEBIAN_MIRROR)" --build-arg DEBIAN_SECURITY_MIRROR="$(API_DEBIAN_SECURITY_MIRROR)" -f "$(API_DOCKERFILE)" -t "$(API_IMAGE):$(API_TAG)" .; \
 	else \
-		docker build --build-arg GOPROXY="$(API_GOPROXY)" --build-arg GOSUMDB="$(API_GOSUMDB)" -f "$(API_DOCKERFILE)" -t "$(API_IMAGE):$(API_TAG)" .; \
+		docker build --build-arg GOPROXY="$(API_GOPROXY)" --build-arg GOSUMDB="$(API_GOSUMDB)" --build-arg DEBIAN_MIRROR="$(API_DEBIAN_MIRROR)" --build-arg DEBIAN_SECURITY_MIRROR="$(API_DEBIAN_SECURITY_MIRROR)" -f "$(API_DOCKERFILE)" -t "$(API_IMAGE):$(API_TAG)" .; \
 	fi
 
 build-frontend:
