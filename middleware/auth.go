@@ -144,7 +144,7 @@ func authHelper(c *gin.Context, minRole int) {
 		c.Abort()
 		return
 	}
-	if apiUserIdStr != "" {
+	if apiUserIdStr != "" && !useCMDBAccessToken {
 		apiUserId, err := strconv.Atoi(apiUserIdStr)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{

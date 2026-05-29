@@ -95,6 +95,7 @@ CMDB_AUTO_CREATE_USER=true
 - `CMDB_AUTH_ENABLED=true` 开启 cmdb JWT 鉴权。
 - `CMDB_JWT_SECRET` 使用 cmdb 的 `SECRET_KEY`。
 - 默认读取请求头 `Access-Token`，也兼容 `Authorization: Bearer <jwt>`。
+- 如果请求头没有 token，默认从 Cookie `token` 读取 cmdb JWT，可通过 `CMDB_AUTH_COOKIE` 修改。
 - new-api 前端支持从 URL 参数 `cmdb_access_token` 读取 cmdb token，保存为本域 `Access-Token` 后清理 URL。
 - 默认使用 cmdb JWT 的 `sub`/`email` 匹配 new-api 本地用户 `email`。
 - 如果设置 `CMDB_AUTH_MATCH_USERNAME=true`，也允许用 cmdb JWT 的 `username` 匹配 new-api 本地用户名。

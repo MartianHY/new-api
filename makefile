@@ -7,10 +7,22 @@ DEV_BACKEND_SERVICE = new-api
 DEV_POSTGRES_DB = new-api
 DEV_POSTGRES_USER = root
 DEV_SQLITE_PATH ?= one-api.db
+API_IMAGE ?= new-api
+API_TAG ?= latest
+API_DOCKERFILE ?= Dockerfile
+API_PLATFORM ?=
 
-.PHONY: all build-frontend build-frontend-classic build-all-frontends start-backend dev dev-api dev-api-rebuild dev-web dev-web-classic reset-setup
+.PHONY: all api build-frontend build-frontend-classic build-all-frontends start-backend dev dev-api dev-api-rebuild dev-web dev-web-classic reset-setup
 
 all: build-all-frontends start-backend
+
+api:
+	@echo "Building API image $(API_IMAGE):$(API_TAG) with $(API_DOCKERFILE)..."
+	@if [ -n "$(API_PLATFORM)" ]; then \
+		docker build --platform "$(API_PLATFORM)" -f "$(API_DOCKERFILE)" -t "$(API_IMAGE):$(API_TAG)" .; \
+	else \
+		docker build -f "$(API_DOCKERFILE)" -t "$(API_IMAGE):$(API_TAG)" .; \
+	fi
 
 build-frontend:
 	@echo "Building default frontend..."

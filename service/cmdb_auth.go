@@ -76,6 +76,14 @@ func ExtractCMDBAccessToken(r *http.Request) string {
 			return token
 		}
 	}
+	cookieName := strings.TrimSpace(common.GetEnvOrDefaultString("CMDB_AUTH_COOKIE", "token"))
+	if cookieName != "" {
+		if cookie, err := r.Cookie(cookieName); err == nil {
+			if token := parseBearerToken(cookie.Value); token != "" {
+				return token
+			}
+		}
+	}
 	return ""
 }
 
