@@ -33,6 +33,8 @@ import { GeneralError } from '@/features/errors/general-error'
 import { NotFoundError } from '@/features/errors/not-found-error'
 import { getSetupStatus } from '@/features/setup/api'
 import { saveAffiliateCode } from '@/features/auth/lib/storage'
+import { getSelf } from '@/lib/api'
+import { useAuthStore } from '@/stores/auth-store'
 
 function RootComponent() {
   // Load system configuration (logo, system name, etc.) from backend
@@ -101,10 +103,15 @@ export const Route = createRootRouteWithContext<{
     const needsSetupCheck =
       !setupStatusChecked && !pathname.startsWith('/setup')
 
-    // 用户信息已通过 auth-store 从 localStorage 恢复
-    // 如果 auth.user 存在，说明用户已登录（有缓存的用户数据）
-    // 如果 auth.user 为 null，说明用户未登录，直接让 _authenticated 路由处理重定向
-    // 不再调用 getSelf() API，避免不必要的网络请求和等待
+    // 尝试用已有 session 或 cmdb Cookie token 恢复登录态。
+    // 失败时保持游客状态，不影响首页、模型广场等公开页面。
+    const { auth } = useAuthStore.getState()
+    if (!auth.user && !pathname.startsWith('/setup')) {
+      const self = await getSelf().catch(() => null)
+      if (self?.success && self.data) {
+        auth.setUser(self.data)
+      }
+    }
 
     // 只检查 setup 状态（如果需要）
     if (needsSetupCheck) {
