@@ -97,6 +97,22 @@ database:
       repository: bitnami/postgresql
       tag: latest-tz
       pullPolicy: IfNotPresent
+    podSecurityContext:
+      fsGroup: 1001
+      fsGroupChangePolicy: OnRootMismatch
+    securityContext:
+      runAsUser: 1001
+      runAsGroup: 1001
+      runAsNonRoot: true
+    volumePermissions:
+      enabled: true
+      image:
+        registry: registry-1.docker.io
+        repository: bitnami/os-shell
+        tag: latest
+        pullPolicy: IfNotPresent
+      securityContext:
+        runAsUser: 0
     persistence:
       enabled: true
       existingClaim: ""

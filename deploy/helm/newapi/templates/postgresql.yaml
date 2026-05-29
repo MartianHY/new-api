@@ -60,10 +60,38 @@ spec:
         {{- include "new-api.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: postgresql
     spec:
+      {{- with .Values.database.postgresql.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and .Values.database.postgresql.persistence.enabled .Values.database.postgresql.volumePermissions.enabled }}
+      initContainers:
+        - name: volume-permissions
+          image: "{{ .Values.database.postgresql.volumePermissions.image.registry }}/{{ .Values.database.postgresql.volumePermissions.image.repository }}:{{ .Values.database.postgresql.volumePermissions.image.tag }}"
+          imagePullPolicy: {{ .Values.database.postgresql.volumePermissions.image.pullPolicy }}
+          {{- with .Values.database.postgresql.volumePermissions.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command:
+            - /bin/bash
+            - -ec
+          args:
+            - |
+              mkdir -p /bitnami/postgresql
+              chown -R 1001:1001 /bitnami/postgresql
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/postgresql
+      {{- end }}
       containers:
         - name: postgresql
           image: "{{ .Values.database.postgresql.image.registry }}/{{ .Values.database.postgresql.image.repository }}:{{ .Values.database.postgresql.image.tag }}"
           imagePullPolicy: {{ .Values.database.postgresql.image.pullPolicy }}
+          {{- with .Values.database.postgresql.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: postgresql
               containerPort: 5432
